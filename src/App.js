@@ -81,69 +81,76 @@ const App = () => {
       [16, 20], [17, 21], [18, 22], [19, 23],*/
       [16, 20], [19, 23], [13, 17], [14, 18],
       [4, 12], [7, 15], [9, 21], [10, 22],
-      [0, 8], [3, 11],
-      [1, 5], [2, 6], 
+      [0, 8], [3, 11], [1, 5], [2, 6], 
     ];
 
     edges.forEach(edge => {
       positions.push(vertices[edge[0]].x, vertices[edge[0]].y, vertices[edge[0]].z);
       positions.push(vertices[edge[1]].x, vertices[edge[1]].y, vertices[edge[1]].z);
     });
-
+  
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     const material = new THREE.LineBasicMaterial({ color: 0xffffff });
     const letterS = new THREE.LineSegments(geometry, material);
     scene.add(letterS);
-
-    // Оси координат
+  
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper);
-
-    // Настройка камеры
+  
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
-
-    // Добавление орбитальных контролов
+  
     const controls = new OrbitControls(camera, renderer.domElement);
-
-    // Создание проекций
+  
     if (topViewRef.current && frontViewRef.current && sideViewRef.current) {
       const setupOrthographicView = (canvas, cameraPosition) => {
         const orthScene = new THREE.Scene();
         const orthCamera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
         const orthRenderer = new THREE.WebGLRenderer({ canvas });
         orthRenderer.setSize(200, 200);
-        
+  
         orthCamera.position.copy(cameraPosition);
         orthCamera.lookAt(0, 0, 0);
-        
+  
+        const clonedLetterS = letterS.clone();
         orthScene.add(new THREE.AxesHelper(5));
-        orthScene.add(letterS.clone());
-        
-        return { scene: orthScene, camera: orthCamera, renderer: orthRenderer };
+        orthScene.add(clonedLetterS);
+  
+        return { scene: orthScene, camera: orthCamera, renderer: orthRenderer, object: clonedLetterS };
       };
-
+  
       const topView = setupOrthographicView(topViewRef.current, new THREE.Vector3(0, 10, 0));
       const frontView = setupOrthographicView(frontViewRef.current, new THREE.Vector3(0, 0, 10));
       const sideView = setupOrthographicView(sideViewRef.current, new THREE.Vector3(10, 0, 0));
-
-      // Анимация
-      const animate = () => {
-        requestAnimationFrame(animate);
-
-        // Обновление трансформаций
+  
+      const updateTransforms = () => {
+        // Обновление трансформаций для основной сцены
         letterS.scale.set(scale.x, scale.y, scale.z);
         letterS.position.set(position.x, position.y, position.z);
         letterS.rotation.set(rotation.x, rotation.y, rotation.z);
-
+  
+        // Обновление трансформаций для проекций
+        [topView, frontView, sideView].forEach(view => {
+          view.object.scale.copy(letterS.scale);
+          view.object.position.copy(letterS.position);
+          view.object.rotation.copy(letterS.rotation);
+        });
+      };
+  
+      const animate = () => {
+        requestAnimationFrame(animate);
+  
+        // Обновление проекций
+        updateTransforms();
+  
         renderer.render(scene, camera);
         topView.renderer.render(topView.scene, topView.camera);
         frontView.renderer.render(frontView.scene, frontView.camera);
         sideView.renderer.render(sideView.scene, sideView.camera);
       };
-
+  
       animate();
-
+  
       return () => {
         renderer.dispose();
         topView.renderer.dispose();
@@ -153,44 +160,99 @@ const App = () => {
     }
   }, [scale, position, rotation]);
 
+  useEffect(() => {
+    const matrix = new THREE.Matrix4();
+
+    const scaleMatrix = new THREE.Matrix4().makeScale(scale.x, scale.y, scale.z);
+    const rotationMatrixX = new THREE.Matrix4().makeRotationX(rotation.x);
+    const rotationMatrixY = new THREE.Matrix4().makeRotationY(rotation.y);
+    const rotationMatrixZ = new THREE.Matrix4().makeRotationZ(rotation.z);
+    const translationMatrix = new THREE.Matrix4().makeTranslation(
+      position.x,
+      position.y,
+      position.z
+    );
+
+    matrix
+      .multiplyMatrices(translationMatrix, rotationMatrixZ)
+      .multiply(rotationMatrixY)
+      .multiply(rotationMatrixX)
+      .multiply(scaleMatrix);
+
+    const matrixArray = matrix.toArray();
+    const formattedMatrix = [];
+    for (let i = 0; i < 4; i++) {
+      formattedMatrix.push(matrixArray.slice(i * 4, (i + 1) * 4));
+    }
+    setTransformMatrix(formattedMatrix);
+  }, [scale, rotation, position]);
+
   return (
     <div className="app">
       <div className="main-view">
         <canvas ref={canvasRef} />
+        <p>Main 3D View</p>
       </div>
       <div className="controls">
         <div className="transform-controls">
           <h3>Масштабирование</h3>
-          <input type="range" min="0.1" max="2" step="0.1" value={scale.x}
-            onChange={(e) => setScale({ ...scale, x: parseFloat(e.target.value) })} />
-          <input type="range" min="0.1" max="2" step="0.1" value={scale.y}
-            onChange={(e) => setScale({ ...scale, y: parseFloat(e.target.value) })} />
-          <input type="range" min="0.1" max="2" step="0.1" value={scale.z}
-            onChange={(e) => setScale({ ...scale, z: parseFloat(e.target.value) })} />
+          <label>X:
+            <input type="range" min="0.1" max="2" step="0.1" value={scale.x}
+              onChange={(e) => setScale({ ...scale, x: parseFloat(e.target.value) })} />
+          </label>
+          <label>Y:
+            <input type="range" min="0.1" max="2" step="0.1" value={scale.y}
+              onChange={(e) => setScale({ ...scale, y: parseFloat(e.target.value) })} />
+          </label>
+          <label>Z:
+            <input type="range" min="0.1" max="2" step="0.1" value={scale.z}
+              onChange={(e) => setScale({ ...scale, z: parseFloat(e.target.value) })} />
+          </label>
 
           <h3>Перенос</h3>
-          <input type="range" min="-5" max="5" step="0.1" value={position.x}
-            onChange={(e) => setPosition({ ...position, x: parseFloat(e.target.value) })} />
-          <input type="range" min="-5" max="5" step="0.1" value={position.y}
-            onChange={(e) => setPosition({ ...position, y: parseFloat(e.target.value) })} />
-          <input type="range" min="-5" max="5" step="0.1" value={position.z}
-            onChange={(e) => setPosition({ ...position, z: parseFloat(e.target.value) })} />
+          <label>X:
+            <input type="range" min="-5" max="5" step="0.1" value={position.x}
+              onChange={(e) => setPosition({ ...position, x: parseFloat(e.target.value) })} />
+          </label>
+          <label>Y:
+            <input type="range" min="-5" max="5" step="0.1" value={position.y}
+              onChange={(e) => setPosition({ ...position, y: parseFloat(e.target.value) })} />
+          </label>
+          <label>Z:
+            <input type="range" min="-5" max="5" step="0.1" value={position.z}
+              onChange={(e) => setPosition({ ...position, z: parseFloat(e.target.value) })} />
+          </label>
 
           <h3>Вращение</h3>
-          <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.x}
-            onChange={(e) => setRotation({ ...rotation, x: parseFloat(e.target.value) })} />
-          <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.y}
-            onChange={(e) => setRotation({ ...rotation, y: parseFloat(e.target.value) })} />
-          <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.z}
-            onChange={(e) => setRotation({ ...rotation, z: parseFloat(e.target.value) })} />
+          <label>X:
+            <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.x}
+              onChange={(e) => setRotation({ ...rotation, x: parseFloat(e.target.value) })} />
+          </label>
+          <label>Y:
+            <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.y}
+              onChange={(e) => setRotation({ ...rotation, y: parseFloat(e.target.value) })} />
+          </label>
+          <label>Z:
+            <input type="range" min="0" max={Math.PI * 2} step="0.1" value={rotation.z}
+              onChange={(e) => setRotation({ ...rotation, z: parseFloat(e.target.value) })} />
+          </label>
         </div>
         
         <div className="projections">
           <h3>Проекции</h3>
           <div className="projection-views">
-            <canvas ref={topViewRef} />
-            <canvas ref={frontViewRef} />
-            <canvas ref={sideViewRef} />
+            <div>
+              <canvas ref={topViewRef} />
+              <p>Top View (XY Plane)</p>
+            </div>
+            <div>
+              <canvas ref={frontViewRef} />
+              <p>Front View (XZ Plane)</p>
+            </div>
+            <div>
+              <canvas ref={sideViewRef} />
+              <p>Side View (YZ Plane)</p>
+            </div>
           </div>
         </div>
 
