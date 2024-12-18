@@ -1,32 +1,55 @@
 /* App.css */
 .app {
-  padding: 20px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  height: 100vh;
+}
+
+.main-view {
+  flex: 1;
 }
 
 .controls {
-  margin-bottom: 20px;
+  width: 300px;
+  padding: 20px;
+  background: #f0f0f0;
+  overflow-y: auto;
+}
+
+.transform-controls input {
+  width: 100%;
+  margin: 5px 0;
+}
+
+.projections {
+  margin-top: 20px;
+}
+
+.projection-views {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.controls div {
+.projection-views canvas {
+  border: 1px solid #ccc;
+}
+
+.matrix {
+  margin-top: 20px;
+}
+
+.matrix-display {
+  font-family: monospace;
+  background: #fff;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.matrix-display div {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  justify-content: space-between;
 }
 
-.controls label {
-  min-width: 120px;
-}
-
-.controls input {
-  width: 60px;
-}
-
-canvas {
-  background: white;
+.matrix-display span {
+  margin: 0 5px;
 }
