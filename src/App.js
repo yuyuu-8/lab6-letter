@@ -9,14 +9,14 @@ const App = () => {
   const topViewRef = useRef(null);
   const frontViewRef = useRef(null);
   const sideViewRef = useRef(null);
-  
+
   const [transformMatrix, setTransformMatrix] = useState([
     [1, 0, 0, 0],
     [0, 1, 0, 0],
     [0, 0, 1, 0],
     [0, 0, 0, 1]
   ]);
-  
+
   const [scale, setScale] = useState({ x: 1, y: 1, z: 1 });
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
   const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
@@ -30,7 +30,7 @@ const App = () => {
     const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current });
     renderer.setSize(window.innerWidth / 2, window.innerHeight);
 
-    // Координаты вершин буквы S
+    // Координаты вершин
     const vertices = [
       // Верхняя часть
       new THREE.Vector3(-0.5, 2, 1),
@@ -64,7 +64,7 @@ const App = () => {
     const geometry = new THREE.BufferGeometry();
     const positions = [];
 
-    // Ребра буквы S
+    // Ребра буквы
     const edges = [
       // Upper part edges
       [0, 1], [1, 2], [2, 3], [3, 0],
@@ -81,54 +81,54 @@ const App = () => {
       [16, 20], [17, 21], [18, 22], [19, 23],*/
       [16, 20], [19, 23], [13, 17], [14, 18],
       [4, 12], [7, 15], [9, 21], [10, 22],
-      [0, 8], [3, 11], [1, 5], [2, 6], 
+      [0, 8], [3, 11], [1, 5], [2, 6],
     ];
 
     edges.forEach(edge => {
       positions.push(vertices[edge[0]].x, vertices[edge[0]].y, vertices[edge[0]].z);
       positions.push(vertices[edge[1]].x, vertices[edge[1]].y, vertices[edge[1]].z);
     });
-  
+
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     const material = new THREE.LineBasicMaterial({ color: 0xffffff });
     const letterS = new THREE.LineSegments(geometry, material);
     scene.add(letterS);
-  
+
     const axesHelper = new THREE.AxesHelper(5);
     scene.add(axesHelper);
-  
+
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
-  
+
     const controls = new OrbitControls(camera, renderer.domElement);
-  
+
     if (topViewRef.current && frontViewRef.current && sideViewRef.current) {
       const setupOrthographicView = (canvas, cameraPosition) => {
         const orthScene = new THREE.Scene();
         const orthCamera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
         const orthRenderer = new THREE.WebGLRenderer({ canvas });
         orthRenderer.setSize(200, 200);
-  
+
         orthCamera.position.copy(cameraPosition);
         orthCamera.lookAt(0, 0, 0);
-  
+
         const clonedLetterS = letterS.clone();
         orthScene.add(new THREE.AxesHelper(5));
         orthScene.add(clonedLetterS);
-  
+
         return { scene: orthScene, camera: orthCamera, renderer: orthRenderer, object: clonedLetterS };
       };
-  
+
       const topView = setupOrthographicView(topViewRef.current, new THREE.Vector3(0, 10, 0));
       const frontView = setupOrthographicView(frontViewRef.current, new THREE.Vector3(0, 0, 10));
       const sideView = setupOrthographicView(sideViewRef.current, new THREE.Vector3(10, 0, 0));
-  
+
       const updateTransforms = () => {
         // Обновление трансформаций для основной сцены
         letterS.scale.set(scale.x, scale.y, scale.z);
         letterS.position.set(position.x, position.y, position.z);
         letterS.rotation.set(rotation.x, rotation.y, rotation.z);
-  
+
         // Обновление трансформаций для проекций
         [topView, frontView, sideView].forEach(view => {
           view.object.scale.copy(letterS.scale);
@@ -136,21 +136,21 @@ const App = () => {
           view.object.rotation.copy(letterS.rotation);
         });
       };
-  
+
       const animate = () => {
         requestAnimationFrame(animate);
-  
+
         // Обновление проекций
         updateTransforms();
-  
+
         renderer.render(scene, camera);
         topView.renderer.render(topView.scene, topView.camera);
         frontView.renderer.render(frontView.scene, frontView.camera);
         sideView.renderer.render(sideView.scene, sideView.camera);
       };
-  
+
       animate();
-  
+
       return () => {
         renderer.dispose();
         topView.renderer.dispose();
@@ -237,7 +237,7 @@ const App = () => {
               onChange={(e) => setRotation({ ...rotation, z: parseFloat(e.target.value) })} />
           </label>
         </div>
-        
+
         <div className="projections">
           <h3>Проекции</h3>
           <div className="projection-views">
